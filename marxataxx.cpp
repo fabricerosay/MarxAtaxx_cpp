@@ -29,7 +29,7 @@ struct ModelWeights
     ModelWeights(std::string w) { load_weights(w); }
 };
 
-const string WeightsPath="path to weights here"
+const std::string WeightsPath="path to weights here"
   
 void ModelWeights::load_weights(std::string w)
 {
