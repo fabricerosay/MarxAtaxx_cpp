@@ -64,6 +64,8 @@ struct Red
     int arr[MAX_DEPTH + 1][200];
 };
 
+const string WeightsPath="/home/fabrice/C++/Autaxx/data/";
+
 struct Red red(int a, int b)
 {
     float af = a / 100;
@@ -101,20 +103,20 @@ void ModelWeights::load_weights(std::string w)
 {
     int cpt = 0;
 
-    std::ifstream w1("/home/fabrice/C++/Autaxx/data/" + w + "10weights.dat", std::ios::binary);
+    std::ifstream w1(WeightsPath + w + "10weights.dat", std::ios::binary);
     while (w1.read(reinterpret_cast<char *>(&W1[cpt]), sizeof(float)))
     {
         cpt++;
     };
 
     cpt = 0;
-    std::ifstream b1("/home/fabrice/C++/Autaxx/data/" + w + "10bias.dat", std::ios::binary);
+    std::ifstream b1(WeightsPath + w + "10bias.dat", std::ios::binary);
     while (b1.read(reinterpret_cast<char *>(&B1[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w2("/home/fabrice/C++/Autaxx/data/" + w + "20weights.dat", std::ios::binary);
+    std::ifstream w2(WeightsPath + w + "20weights.dat", std::ios::binary);
     while (w2.read(reinterpret_cast<char *>(&W2[cpt]), sizeof(float)))
     {
 
@@ -122,26 +124,26 @@ void ModelWeights::load_weights(std::string w)
     };
 
     cpt = 0;
-    std::ifstream b2("/home/fabrice/C++/Autaxx/data/" + w + "20bias.dat", std::ios::binary);
+    std::ifstream b2(WeightsPath + w + "20bias.dat", std::ios::binary);
     while (b2.read(reinterpret_cast<char *>(&B2[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w3("/home/fabrice/C++/Autaxx/data/" + w + "30weights.dat", std::ios::binary);
+    std::ifstream w3(WeightsPath + w + "30weights.dat", std::ios::binary);
     while (w3.read(reinterpret_cast<char *>(&W3[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
 
-    std::ifstream b3("/home/fabrice/C++/Autaxx/data/" + w + "30bias.dat", std::ios::binary);
+    std::ifstream b3(WeightsPath + w + "30bias.dat", std::ios::binary);
     while (b3.read(reinterpret_cast<char *>(&B3[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w0("/home/fabrice/C++/Autaxx/data/" + w + "00.dat", std::ios::binary);
+    std::ifstream w0(WeightsPath + w + "00.dat", std::ios::binary);
     while (w0.read(reinterpret_cast<char *>(&W0[cpt]), sizeof(int16_t)))
     {
         cpt++;
