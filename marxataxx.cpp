@@ -14,6 +14,74 @@
 
 #include "assert.h"
 
+const int MATE = 20000;
+
+#define MAX_DEPTH 100
+
+// int RazoringDepth = 7;
+// int FutilityDepth = 4;
+
+// int FutilityPruneRank = 13;
+// int FutilityPruneMargin = 176;
+// int FrontierWeight = 80;
+// int TerritoryWeight = 125;
+
+// int aFutilityMargin = 74;
+// int bFutilityMargin = 61;
+
+// int aRazoringMargin = 72;
+// int bRazoringMArgin = 62;
+// int ProbCutBetaMargin = 209;
+// int DeltaProbCutBetaMargin = 257;
+// int ProbCutAlphaMargin = 209;
+// int DeltaProbCutAlphaMargin = 199;
+// int aLMR = 74;
+// int bLMR = 244;
+
+int RazoringDepth = 7;
+int FutilityDepth = 4;
+
+int FutilityPruneRank = 13;
+
+int FrontierWeight = 84;
+int TerritoryWeight = 133;
+
+int FutilityPruneMargin = 192;
+int aFutilityMargin = 73;
+int bFutilityMargin = 57;
+
+int aRazoringMargin = 70;
+int bRazoringMArgin = 58;
+int ProbCutBetaMargin = 244;
+int DeltaProbCutBetaMargin = 275;
+int ProbCutAlphaMargin = 242;
+int DeltaProbCutAlphaMargin = 209;
+int aLMR = 83;
+int bLMR = 247;
+struct Red
+{
+
+    int arr[MAX_DEPTH + 1][200];
+};
+
+struct Red red(int a, int b)
+{
+    float af = a / 100;
+    float bf = b / 100;
+    struct Red r;
+    for (int i = 0; i < MAX_DEPTH + 1; i++)
+    {
+        for (int j = 0; j < 200; j++)
+        {
+            // r.arr[i][j] = 0.4f + log(i + 1) * log(j + 1) / 2.75;
+            r.arr[i][j] = af + log(i + 1) * log(j + 1) / bf;
+        }
+    }
+    return r;
+}
+
+auto Reduction = red(aLMR, bLMR);
+
 struct ModelWeights
 {
     int16_t W0[62985600];
@@ -29,26 +97,24 @@ struct ModelWeights
     ModelWeights(std::string w) { load_weights(w); }
 };
 
-const std::string WeightsPath="path to weights here";
-  
 void ModelWeights::load_weights(std::string w)
 {
     int cpt = 0;
 
-    std::ifstream w1(WeightsPath + w + "10weights.dat", std::ios::binary);
+    std::ifstream w1("/home/fabrice/C++/Autaxx/data/" + w + "10weights.dat", std::ios::binary);
     while (w1.read(reinterpret_cast<char *>(&W1[cpt]), sizeof(float)))
     {
         cpt++;
     };
 
     cpt = 0;
-    std::ifstream b1(WeightsPath + w + "10bias.dat", std::ios::binary);
+    std::ifstream b1("/home/fabrice/C++/Autaxx/data/" + w + "10bias.dat", std::ios::binary);
     while (b1.read(reinterpret_cast<char *>(&B1[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w2(WeightsPath+ w + "20weights.dat", std::ios::binary);
+    std::ifstream w2("/home/fabrice/C++/Autaxx/data/" + w + "20weights.dat", std::ios::binary);
     while (w2.read(reinterpret_cast<char *>(&W2[cpt]), sizeof(float)))
     {
 
@@ -56,26 +122,26 @@ void ModelWeights::load_weights(std::string w)
     };
 
     cpt = 0;
-    std::ifstream b2(WeightsPath + w + "20bias.dat", std::ios::binary);
+    std::ifstream b2("/home/fabrice/C++/Autaxx/data/" + w + "20bias.dat", std::ios::binary);
     while (b2.read(reinterpret_cast<char *>(&B2[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w3(WeightsPath + w + "30weights.dat", std::ios::binary);
+    std::ifstream w3("/home/fabrice/C++/Autaxx/data/" + w + "30weights.dat", std::ios::binary);
     while (w3.read(reinterpret_cast<char *>(&W3[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
 
-    std::ifstream b3(WeightsPath + w + "30bias.dat", std::ios::binary);
+    std::ifstream b3("/home/fabrice/C++/Autaxx/data/" + w + "30bias.dat", std::ios::binary);
     while (b3.read(reinterpret_cast<char *>(&B3[cpt]), sizeof(float)))
     {
         cpt++;
     };
     cpt = 0;
-    std::ifstream w0(WeightsPath + w + "00.dat", std::ios::binary);
+    std::ifstream w0("/home/fabrice/C++/Autaxx/data/" + w + "00.dat", std::ios::binary);
     while (w0.read(reinterpret_cast<char *>(&W0[cpt]), sizeof(int16_t)))
     {
         cpt++;
@@ -212,13 +278,6 @@ namespace board
 #define Bitloop(X) for (; X; X &= X - 1)
 #define BB uint64_t
 #define u8 uint8_t
-    enum Color
-    {
-        BLACK,
-        WHITE,
-        DRAW,
-        NONE
-    };
 
     [[nodiscard]] constexpr int count(BB data)
     {
@@ -276,7 +335,121 @@ namespace board
             }
         }
     };
+    constexpr bool can_repeat(BB us, BB empties, BB them)
+    {
+        // we use it only when empties are not in reach so we can eventually fill a hole to reach another one
+        if (doublesBB(empties) & empties)
+        {
+            return true;
+        }
+        // else can we reach a hole by a safe double ?
+        BB in_reach = (singlesBB(them) | doublesBB(them)) & us;
+        if (doublesBB(empties) & us & (~in_reach) & FULL)
+        {
+            return true;
+        }
+        return false;
+    }
 
+    enum
+    {
+        UNKNOWN,
+        BETA_DRAW,
+        ALPHA_DRAW,
+        DRAW,
+        EXTEND
+    };
+
+    constexpr BB territory(BB us, BB empties)
+    {
+        // no capture by us
+        // faire grossir car peut contenir un vide entouré de vide
+        auto territory = us;
+        BB new_territory = territory | ((singlesBB(territory) | doublesBB(territory)) & empties);
+        while (new_territory != territory)
+        {
+            territory = new_territory;
+            new_territory = territory | ((singlesBB(territory) | doublesBB(territory)) & empties);
+        }
+        return territory;
+    }
+
+    constexpr int potentially_draw(BB us, BB them, BB empties)
+    {
+        // no capture by us
+        // faire grossir car peut contenir un vide entouré de vide
+        auto us_empties = (singlesBB(us)) & empties;
+        BB new_us_empties = 0;
+        while (true)
+        {
+            new_us_empties = ((singlesBB(us_empties)) & empties) | us_empties;
+            if (new_us_empties == us_empties)
+                break;
+            us_empties = new_us_empties;
+        }
+
+        auto them_empties = (singlesBB(them)) & empties;
+        BB new_them_empties = 0;
+        while (true)
+        {
+            new_them_empties = ((singlesBB(them_empties) | doublesBB(them_empties)) & empties) | them_empties;
+            if (new_them_empties == them_empties)
+                break;
+            them_empties = new_them_empties;
+        }
+        // no capture by us ?
+        if ((singlesBB(us_empties) | doublesBB(us_empties)) & them)
+        {
+            // std::cout << "Error in potentially_draw: we can capture\n " << count(singlesBB(us_empties) & them) << "\n";
+            //  we can capture
+            return UNKNOWN;
+        }
+
+        // no capture by them ?
+        if ((singlesBB(them_empties) | doublesBB(them_empties)) & us)
+        {
+            // std::cout << "Error in potentially_draw: they can capture\n";
+            // they can capture
+
+            return UNKNOWN;
+        }
+        // empties are in reach from other empties, we or they may invade later
+        if (doublesBB(us_empties) & them_empties)
+        { // empties are in reach from other empties
+            // std::cout << "Error in potentially_draw: we can double\n";
+            //  we can double move into empties
+            return UNKNOWN;
+        }
+        // we can fill all the holes ?
+        if ((us | us_empties | them | them_empties) != FULL)
+        {
+            // std::cout << "Error in potentially_draw: we can't fill all the holes\n";
+            // no
+            return UNKNOWN;
+        }
+
+        // can we repeat ?
+
+        const bool us_repeat = can_repeat(us, us_empties, them);
+
+        // can they repeat ?
+
+        const bool them_repeat = can_repeat(them, them_empties, us);
+
+        if (us_repeat && them_repeat)
+        {
+            return DRAW;
+        }
+        if (us_repeat)
+        {
+            return ALPHA_DRAW;
+        }
+        if (them_repeat)
+        {
+            return BETA_DRAW;
+        }
+        return EXTEND;
+    }
     [[nodiscard]] constexpr BB singles(int sq)
     {
         BB b = 1ULL << sq;
@@ -508,6 +681,9 @@ namespace board
             if (sqf != move.to())
             {
                 hash ^= ZOBRIST[static_cast<int>(player)][sqf];
+            }
+            else
+            {
                 fifty = 0;
             }
             hash ^= ZOBRIST[static_cast<int>(player)][move.to()];
@@ -556,7 +732,7 @@ namespace board
             return;
         };
 
-        int gen_moves(Move *moves, int *scores, Move hmove = NONEMOVE, bool sort = true)
+        int gen_moves(Move *moves, int *scores, uint64_t (&hh)[2][64][64], uint64_t (&bf)[2][64][64], Move hmove = NONEMOVE, Move killer1 = NONEMOVE, Move killer2 = NONEMOVE, bool sort = true)
         {
             static const std::array<int, 9> jumping_penalties = {0, 0, 0, 100, 200, 200, 300, 300, 400};
             static const std::array<std::array<int, 9>, 2> score_by_captures{{
@@ -572,6 +748,7 @@ namespace board
             int endsort = 0;
             int score;
             int8_t sq;
+            auto value0 = board_value();
             if (hmove.from() != -2)
             {
                 moves[0] = hmove;
@@ -585,8 +762,18 @@ namespace board
                 if (sq != hmove.from())
                 {
                     moves[cpt] = Move(sq, sq);
-
-                    scores[cpt] = score_by_captures[0][board::count(singles(sq) & other())];
+                    if (killer1.from() == killer1.to() == sq)
+                    {
+                        scores[cpt] = 10000;
+                    }
+                    else if (killer2.from() == killer2.to() == sq)
+                        scores[cpt] = 9000;
+                    else
+                    {
+                        auto inf = play(moves[cpt]);
+                        scores[cpt] = -board_value();
+                        undo(moves[cpt], inf);
+                    }
                     score = scores[cpt];
                     int k = cpt - 1;
                     while (k >= endsort)
@@ -616,8 +803,23 @@ namespace board
                     if (sqf != hmove.from() || sqt != hmove.to())
                     {
                         moves[cpt] = Move(sqf, sqt);
+                        if (killer1.from() == sqf && killer1.to() == sqt)
+                        {
+                            scores[cpt] = 10000;
+                        }
+                        else if (killer2.from() == sqf && killer2.to() == sqt)
+                        {
+                            scores[cpt] = 9000;
+                        }
+                        else
+                        {
+                            auto inf = play(moves[cpt]);
+                            scores[cpt] = -board_value();
+                            undo(moves[cpt], inf);
+                            // scores[cpt] += hh[get_player()][sqf][sqt] / (1 + bf[get_player()][sqf][sqt]);
+                        }
                         // score = board::count(singles(sqt) & other()) - board::count(singles(sqf) & us());
-                        scores[cpt] = score_by_captures[1][board::count(singles(sqt) & other())] - jumping_penalties[board::count(singles(sqf) & us())];
+
                         ;
                         ;
                         score = scores[cpt];
@@ -667,6 +869,12 @@ namespace board
             }
             return nmoves;
         };
+
+        constexpr int is_dry()
+        {
+            return potentially_draw(us(), other(), empties());
+        }
+
         constexpr bool legal_move(Move move)
         {
             return get(empties(), move.to()) && (((SINGLES[move.to()] & us()) && (move.to() == move.from())) || ((DOUBLES[move.to()] && us()) && (move.to() != move.from())));
@@ -789,6 +997,33 @@ namespace board
             indices(ev.active_features);
             return ev.apply();
         }
+        BB my_territory()
+        {
+            return territory(us(), empties());
+        }
+        BB opp_territory()
+        {
+            return territory(other(), empties());
+        }
+        void strict_territories(BB &my_strict, BB &opp_strict)
+        {
+            auto mine = my_territory();
+            auto opp = opp_territory();
+            my_strict = mine & ~opp;
+            opp_strict = opp & ~mine;
+        }
+        int board_value()
+        {
+            //    BB my_strict;
+            //    BB opp_strict;
+            //       strict_territories(my_strict, opp_strict);
+            auto mine = my_territory();
+            auto opp = opp_territory();
+            auto common = singlesBB(mine & opp);
+            auto my_frontier = common & us();
+            auto opp_frontier = common & other();
+            return TerritoryWeight * (count(mine) - count(opp)) + FrontierWeight * (count(opp_frontier) - count(my_frontier));
+        }
 
     private:
         Board board;
@@ -867,27 +1102,24 @@ struct Entry
     }
     BB hashentry()
     {
-        return hash ^ depth ^ value ^ flag ^ fifty;
+        return hash ^ depth ^ value ^ svalue;
     }
     BB hash;
     int depth;
     int value;
+    int svalue;
     uint8_t fifty;
     int8_t flag;
     board::Move move = board::NONEMOVE;
     BB check;
 };
-static const int MATE = 20000;
-
-#define DEF_DEPTH 5
-#define MAX_DEPTH 100
 
 template <>
 void TT<Entry>::init()
 {
     for (int i = 0; i < max_entries_; i++)
     {
-        entries_[i] = Entry{0, 0, 0, 0, 0, board::NONEMOVE, 0};
+        entries_[i] = Entry{0, 0, 0, 0, 0, 0, board::NONEMOVE, 0};
     }
     return;
 }
@@ -925,17 +1157,23 @@ struct SearchState
 {
     uint64_t nodes = 0;
     int depth;
+    int seldepth = 0;
+    int dextension = 0;
     bool nullmove = true;
     bool stop = false;
     int timed;
     int eval[MAX_DEPTH];
+    board::Move killers[MAX_DEPTH][2] = {board::NONEMOVE};
+    uint64_t hh_score[2][64][64];
+    uint64_t bf_score[2][64][64];
+    uint64_t hash[MAX_DEPTH];
     TimePoint end;
 
     int tt_hits = 0;
 };
 
 TimePoint time_management(const board::Game &game, Settings &settings, TimePoint start);
-void info_string(const SearchState &state, const int depth, const int score, const double elapsed);
+void info_string(const SearchState &state, const int depth, const int seldepth, const int score, const double elapsed);
 
 TimePoint time_management(board::Game &game, Settings &settings, TimePoint start)
 {
@@ -963,9 +1201,9 @@ TimePoint time_management(board::Game &game, Settings &settings, TimePoint start
     return start + movetime;
 }
 
-void info_string(const SearchState &state, const int depth, const int score, const double elapsed)
+void info_string(const SearchState &state, const int depth, const int seldepth, const int score, const double elapsed)
 {
-    std::cout << "info depth " << depth << " score " << score << " nodes " << state.nodes << " time " << elapsed;
+    std::cout << "info depth " << depth << " info seldepth " << seldepth << " score " << score << " nodes " << state.nodes << " time " << elapsed;
 
     if (elapsed > 0)
     {
@@ -976,51 +1214,8 @@ void info_string(const SearchState &state, const int depth, const int score, con
     std::cout << " ttHits " << state.tt_hits;
     std::cout << std::endl;
 }
-struct params
-{
-    int d;
-    float t;
-    float a, b, s;
-};
 
-static const params PARAMS[11] = {{2, 1.2, 0.9464928482070774, 10.718814499923413, 1089.346159940451},
-                                  {1, 1.2, 0.928071690939013, 95.16792245178911, 1312.5596344060737},
-                                  {2, 1.2, 0.9349643689371323, 18.326399539121834, 1326.0433756412353},
-                                  {3, 1.2, 0.9299730133182024, 120.35933074556475, 1455.7156284394237},
-                                  {4, 1.2, 0.966673258039868, 20.15830690107833, 1235.7414399626864},
-                                  {5, 1.2, 0.977725244698304, 26.374767547942724, 1226.375074493378},
-                                  {6, 1.2, 0.9962166144689723, 10.001187008928209, 1137.043612874676},
-                                  {5, 1.2, 0.977725244698304, 26.374767547942724, 1226.375074493378},
-                                  {6, 1.2, 0.9962166144689723, 10.001187008928209, 1137.043612874676},
-                                  {5, 1.2, 0.977725244698304, 26.374767547942724, 1226.375074493378},
-                                  {6, 1.2, 0.9962166144689723, 10.001187008928209, 1137.043612874676}};
-
-const int Factor = 1;
-
-constexpr std::array<int, 4> futility_margins = {200 / (Factor), 400 / (Factor), 600 / (Factor), 800 / (Factor)};
-struct Red
-{
-
-    int arr[MAX_DEPTH + 1][200];
-};
-
-struct Red red()
-{
-    struct Red r;
-    for (int i = 0; i < MAX_DEPTH + 1; i++)
-    {
-        for (int j = 0; j < 200; j++)
-        {
-            // r.arr[i][j] = 0.4f + log(i + 1) * log(j + 1) / 2.75;
-            r.arr[i][j] = 0.75f + log(i + 1) * log(j + 1) / 2;
-        }
-    }
-    return r;
-}
-
-static const auto Reduction = red();
-
-int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt, Evaluator &ev, SearchState &state)
+int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt, Evaluator &ev, SearchState &state, board::Move excluded = board::NONEMOVE)
 {
     if (state.stop)
         return 0;
@@ -1030,9 +1225,29 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         state.stop = true;
         return 0;
     }
-
+    int static_eval;
+    state.hash[ply] = game.get_hash();
+    bool singular = excluded.from() != -2;
     bool pv = (alpha + 1 != beta);
     state.nodes++;
+    state.seldepth = std::max(state.seldepth, ply);
+    // int reps = 0;
+    // // for (int i = 2; i <= std::min(ply, int(game.get_fifty())); i += 2)
+    // // {
+    // //     if (state.hash[ply - i] == state.hash[ply] && game.is_dry() == board::DRAW)
+    // //     {
+    // //         // reps++;
+    // //         // if (reps == 2)
+    // //         // {
+    // //         //     return (100 - game.get_fifty()) * game.eval(ev) / 100;
+    // //         // }
+    // //         return 0;
+    // //     }
+    // // }
+    // if (board::count(game.empties()) < 10 && game.is_dry() == board::DRAW)
+    // {
+    //     return 0;
+    // }
     if (game.isOver())
     {
         if (game.get_fifty() >= 100)
@@ -1051,7 +1266,8 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         }
         return 0;
     };
-    if (depth <= 0 || ply >= MAX_DEPTH)
+
+    if (depth <= 0 || ply >= MAX_DEPTH - 1)
     {
         // return 100 * (board::count(game.us()) - board::count(game.other()));
 
@@ -1068,34 +1284,42 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         hmove = entry.move;
         //}
         state.tt_hits += 1;
-        if (entry.depth >= depth && !pv)
+        static_eval = entry.svalue;
+        if (!singular)
         {
-
-            if (entry.flag == 2)
+            if (entry.depth >= depth && !pv)
             {
-                alpha = max(alpha, entry.value);
 
-                if (alpha >= beta)
-                    return alpha;
+                if (entry.flag == 2)
+                {
+                    alpha = max(alpha, entry.value);
+
+                    if (alpha >= beta)
+                        return alpha;
+                }
+                else if (entry.flag == 1)
+                {
+                    beta = min(beta, entry.value);
+                    if (alpha >= beta)
+                        return alpha;
+                }
+                else if (entry.flag == 3)
+                    return entry.value;
             }
-            else if (entry.flag == 1)
-            {
-                beta = min(beta, entry.value);
-                if (alpha >= beta)
-                    return alpha;
-            }
-            else if (entry.flag == 3)
-                return entry.value;
         }
     }
-    const int static_eval = game.eval(ev);
+    else
+    {
+        static_eval = game.eval(ev);
+    }
     state.eval[ply] = static_eval;
     const auto improving = ply >= 2 && state.eval[ply] >= state.eval[ply - 2];
-    if (ply >= 1 && depth <= 4 && !pv)
+
+    if (ply >= 1 && depth <= FutilityDepth && !pv)
     {
         assert(depth > 0);
 
-        if (static_eval + 150 * (depth + improving) <= alpha)
+        if (static_eval + aFutilityMargin * (depth) + bFutilityMargin * improving <= alpha)
         {
             return alpha;
         }
@@ -1104,37 +1328,18 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         //     return beta;
         // }
     }
-    if (depth <= 8 && !pv && static_eval - 150 * (depth - improving) >= beta)
+    if (depth <= RazoringDepth && !pv && static_eval - aRazoringMargin * (depth)-bRazoringMArgin * improving >= beta)
     {
         return beta;
     }
-    if (4 <= depth && depth <= 14 && ply >= 1 && !pv)
-    {
-        const params p = PARAMS[depth - 4];
-        if (static_eval >= beta - 200 / 16)
-        {
-            const int newbeta = (beta - p.b / 10 + p.t * p.s / 5) / p.a;
-            const int vbeta = ab(game, newbeta - 1, newbeta, p.d, ply + 1, tt, ev, state);
 
-            if (vbeta >= newbeta)
-                return beta;
-        }
-        else if (static_eval <= alpha + 200 / 16)
-        {
-            const int newalpha = (alpha - p.b / 10 - p.t * p.s / 5) / p.a;
-            const int valpha = ab(game, newalpha, newalpha + 1, p.d, ply + 1, tt, ev, state);
-
-            if (valpha <= newalpha)
-                return alpha;
-        }
-    }
-    int Rbase = 1; //- (board::count(game.us()) + board::count(game.other()) >= 48);
-    if ((hmove.from() == -2 || hmove.from() == -1) && depth > 4)
+    if ((hmove.from() == -2) && depth > 4)
     {
         // if (!pv)
         //     Rbase += 3 - improving;
         // else
         // {
+
         int v = ab(game, alpha, beta, depth - 4, 0, tt, ev, state);
         const Entry &newentry = tt.poll(game.get_hash());
         hmove = newentry.move;
@@ -1145,17 +1350,40 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         //}
     }
 
+    if (5 < depth && ply >= 1 && !pv && beta < MATE - 49)
+    {
+        if (static_eval >= beta + DeltaProbCutBetaMargin)
+        {
+            const int newbeta = (beta + ProbCutBetaMargin);
+            const int vbeta = ab(game, newbeta - 1, newbeta, depth - 4, ply, tt, ev, state);
+
+            if (vbeta >= newbeta)
+                return beta;
+        }
+        else if (static_eval <= alpha - DeltaProbCutAlphaMargin)
+        {
+            const int newalpha = (alpha - ProbCutAlphaMargin);
+            const int valpha = ab(game, newalpha, newalpha + 1, depth - 4, ply, tt, ev, state);
+
+            if (valpha <= newalpha)
+                return alpha;
+        }
+    }
+    int Rbase = 1; // - (board::count(game.us()) + board::count(game.other()) >= 48);
+
     int bestvalue = -MATE;
     board::Move moves[200] = {board::NONEMOVE};
     int scores[200] = {-1000};
-    int nmoves = game.gen_moves(moves, scores, hmove);
+    int nmoves = game.gen_moves(moves, scores, state.hh_score, state.bf_score, hmove, state.killers[ply][0], state.killers[ply][1]);
     int prevalpha = alpha;
     int newalpha = -alpha - 1;
     int R = 0;
     int v;
     int rank = 0;
-    bool mustpass = false;
 
+    int repetition = 0;
+    bool dextension = false;
+    board::Move repmove = board::NONEMOVE;
     for (int k = 0; k < nmoves; k++)
     {
 
@@ -1169,18 +1397,50 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
         //     break;
         // }
         // if (k > 0 && depth <= 2 && scores[k] <= 100 * (1 - improving))
+
         //  break;
+        if (k > FutilityPruneRank && depth <= 2 && scores[k] <= FutilityPruneMargin && alpha > -MATE + 49)
+            break;
+        if (move.from() == excluded.from() && move.to() == excluded.to())
+            continue;
+        int extension = 0;
+        if (move.from() == hmove.from() && move.to() == hmove.to() && !singular && ply > 0 && depth >= 8 && entry.value < MATE - 49 && entry.depth >= depth - 3 && entry.flag != 1)
+        {
+            int singular_beta = (entry.value - 4 * depth);
+            int singular_score = ab(game, singular_beta - 1, singular_beta, (depth - 1) / 2, ply, tt, ev, state, hmove);
+            if (singular_score < singular_beta)
+            {
+                if (!pv && state.dextension < 6)
+                {
+                    ++state.dextension;
+                    dextension = true;
+                    extension = 2;
+                }
+                else
+                    extension = 1;
+            }
+
+            else if (singular_beta >= beta)
+            {
+                return singular_beta;
+            }
+
+            else if (entry.value >= beta)
+            {
+                extension = -1;
+            }
+            else if (entry.value <= alpha)
+            {
+                extension = -1;
+            }
+        }
         auto inf = game.play(move);
 
-        // if (game.is_repetition())
-        // {
-        //     game.undo(move, inf);
-        //     continue;
-        // }
-
-        if (k == 0)
+        if (k <= 0)
         {
-            v = -ab(game, -beta, -alpha, depth - Rbase - R, ply + 1, tt, ev, state);
+            v = -ab(game, -beta, -alpha, depth - Rbase - R + extension, ply + 1, tt, ev, state);
+            if (dextension)
+                --state.dextension;
         }
         else
         {
@@ -1201,8 +1461,15 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
             // {
             //     R = 4;
             // }
+            R = !pv;
+
             if (depth >= 3)
-                R = Reduction.arr[depth][k];
+                R += Reduction.arr[min(depth, 63)][min(k, 63)];
+            if (scores[k] >= 9000)
+            {
+                R -= 1;
+            }
+            R = max(0, min(R, depth - 1));
             // if (!pv && Rbase > 0)
             // {
             //     R += 1;
@@ -1234,35 +1501,48 @@ int ab(board::Game &game, int alpha, int beta, int depth, int ply, TT<Entry> &tt
             if (v > alpha)
             {
                 alpha = v;
+
                 if (alpha >= beta)
+                {
+                    if (k > 2 && (bestmove.from() != state.killers[ply][0].from() || bestmove.to() != state.killers[ply][0].to()))
+                    {
+                        state.killers[ply][1] = state.killers[ply][0];
+                        state.killers[ply][0] = bestmove;
+                    }
+                    state.hh_score[game.get_player()][move.from()][move.to()] += depth * depth;
+
                     break;
+                }
             }
+            state.bf_score[game.get_player()][move.from()][move.to()] += depth;
         }
     }
-
     int8_t flag;
-    if (bestvalue <= prevalpha)
+    if (!singular)
     {
-        bestmove = board::NONEMOVE;
-        flag = 1;
-    }
-    else if (bestvalue >= beta)
-    {
-        flag = 2;
-    }
-    else
-    {
-        flag = 3;
-    }
-    // assert(bestmove.from() != -2);
+        if (bestvalue <= prevalpha)
+        {
+            bestmove = board::NONEMOVE;
+            flag = 1;
+        }
+        else if (bestvalue >= beta)
+        {
+            flag = 2;
+        }
+        else
+        {
+            flag = 3;
+        }
+        // assert(bestmove.from() != -2);
 
-    tt.add(game.get_hash(), {game.get_hash(), depth, bestvalue, game.get_fifty(), flag, bestmove, game.get_hash() ^ depth ^ bestvalue ^ flag ^ game.get_fifty()});
+        tt.add(game.get_hash(), {game.get_hash(), depth, bestvalue, static_eval, game.get_fifty(), flag, bestmove, game.get_hash() ^ depth ^ bestvalue ^ static_eval});
+    }
     return bestvalue;
 };
 
 board::Move pvsearch(board::Game &game, Settings &settings, TT<Entry> &tt, Evaluator &ev)
 {
-    static constexpr array<int, 5> bounds = {50, 100 / (Factor), 150 / (Factor), 200 / (Factor), 10 * MATE};
+    static constexpr array<int, 5> bounds = {50, 100, 150, 200, 10 * MATE};
     board::Move best_move;
     const int alpha = -MATE;
     const int beta = MATE;
@@ -1331,13 +1611,13 @@ board::Move pvsearch(board::Game &game, Settings &settings, TT<Entry> &tt, Evalu
         }
 
         auto entry = tt.poll(game.get_hash());
-        info_string(state, depth, best_score, elapsed);
+        info_string(state, depth, state.seldepth, best_score, elapsed);
         best_move = entry.move;
     }
     return best_move;
 }
 
-const int NTHREADS = 8;
+const int NTHREADS = 1;
 
 struct SearchResult
 {
@@ -1374,6 +1654,12 @@ struct Thread
         state.nodes = 0;
         state.tt_hits = 0;
         state.stop = false;
+        state.seldepth = 0;
+        for (int i = 0; i < MAX_DEPTH; i++)
+        {
+            state.eval[i] = 0;
+            state.hash[i] = 0;
+        }
         const TimePoint start = std::chrono::steady_clock::now();
         state.timed = settings.timed;
         if (settings.timed)
@@ -1385,7 +1671,7 @@ struct Thread
         while (true)
         {
             int d = result->depth + offset + 1;
-            if (d > MAX_DEPTH)
+            if (d > MAX_DEPTH - 1)
                 break;
             const TimePoint start = std::chrono::steady_clock::now();
             ab(game, -MATE, MATE, d, 0, *tt, ev, state);
@@ -1398,13 +1684,17 @@ struct Thread
             result->lck.lock();
             if (d > result->depth)
             {
+                result->move = board::PASSMOVE;
                 auto entry = tt->poll(game.get_hash());
-                result->move = entry.move;
-                result->value = entry.value;
-                result->depth = entry.depth;
-                result->searchid = result->searchid % NTHREADS + 1;
-                // offset = __builtin_ctz(result->searchid);
-                info_string(state, entry.depth, entry.value, elapsed);
+                if (entry.hash == game.get_hash() && entry.check == entry.hashentry())
+                {
+                    result->move = entry.move;
+                    result->value = entry.value;
+                    result->depth = entry.depth;
+                    result->searchid = result->searchid % NTHREADS + 1;
+                    // offset = __builtin_ctz(result->searchid);
+                    info_string(state, entry.depth, state.seldepth, entry.value, elapsed);
+                }
             }
             result->lck.unlock();
         }
@@ -1497,7 +1787,7 @@ void go(vector<Thread> &threadpool, const std::string &s)
     {
         nodes += threadpool[k].state.nodes;
     }
-    std::cout << "nps " << nodes << std::endl;
+
     const board::Move move = threadpool[0].result->move;
 
     std::cout << "bestmove " << move << std::endl;
@@ -1526,7 +1816,7 @@ int main()
 
     std::string cmd;
     std::string msg;
-
+    std::string word;
     while (true)
     {
         getline(std::cin, msg);
@@ -1561,6 +1851,8 @@ int main()
             {
 
                 threadpool[i].game.startpos();
+                std::memset(threadpool[i].state.hh_score, 0, sizeof(uint64_t) * 2 * 64 * 64);
+                std::memset(threadpool[i].state.bf_score, 0, sizeof(uint64_t) * 2 * 64 * 64);
             }
             tt.clear();
         }
@@ -1574,9 +1866,73 @@ int main()
 
         else if (cmd.compare("go") == 0)
             go(threadpool, msg.substr(3));
+        else if (cmd.compare("setoption") == 0)
+        {
+            ss >> word;
+            if (word != "name")
+            {
+                std::cerr << "info string expected \"name\"\n";
+                continue;
+            }
+
+            std::string name;
+            ss >> name;
+
+            ss >> word;
+            if (word != "value")
+            {
+                std::cerr << "info string expected \"value\"\n";
+                continue;
+            }
+
+            std::string value;
+            ss >> value;
+
+            const auto weight = std::stoi(value);
+
+            if (name == "FutilityDepth")
+                FutilityDepth = weight;
+            else if (name == "aFutilityMargin")
+                aFutilityMargin = weight;
+            else if (name == "bFutilityMargin")
+                bFutilityMargin = weight;
+            else if (name == "RazoringDepth")
+                RazoringDepth = weight;
+            else if (name == "aRazoringMargin")
+                aRazoringMargin = weight;
+            else if (name == "bRazoringMArgin")
+                bRazoringMArgin = weight;
+            else if (name == "ProbCutBetaMargin")
+                ProbCutBetaMargin = weight;
+            else if (name == "DeltaProbCutBetaMargin")
+                DeltaProbCutBetaMargin = weight;
+            else if (name == "ProbCutAlphaMargin")
+                ProbCutAlphaMargin = weight;
+            else if (name == "DeltaProbCutAlphaMargin")
+                DeltaProbCutAlphaMargin = weight;
+            else if (name == "FutilityPruneRank")
+                FutilityPruneRank = weight;
+            else if (name == "FutilityPruneMargin")
+                FutilityPruneMargin = weight;
+            else if (name == "TerritoryWeight")
+                TerritoryWeight = weight;
+            else if (name == "FrontierWeight")
+                FrontierWeight = weight;
+            else if (name == "aLMR")
+            {
+                aLMR = weight;
+                Reduction = red(aLMR, bLMR);
+            }
+            else if (name == "bLMR")
+            {
+                bLMR = weight;
+                Reduction = red(aLMR, bLMR);
+            }
+        }
         else if (cmd.compare("quit") == 0)
             break;
     }
     free(m1);
     return 0;
 };
+
